@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Slonimsky Pattern Lab</title>
+<style>
+  :root{
+    --paper:#f4eee1; --card:#fffdf6; --ink:#2a241c; --muted:#7a6f5c;
+    --line:#e3d9c4; --brass:#a5731c; --brass-dark:#7e5613; --accent:#c23b22;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:20px 24px;background:var(--paper);color:var(--ink);
+       font:15px/1.45 -apple-system,"Segoe UI",Helvetica,Arial,sans-serif}
+  h1{font-family:Georgia,"Times New Roman",serif;font-weight:600;font-size:26px;margin:0 0 2px}
+  h1 .tag{font-size:13px;color:var(--muted);font-family:inherit;font-style:italic;margin-left:8px}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 16px;max-width:820px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;
+        padding:14px 16px;box-shadow:0 1px 3px rgba(60,45,10,.06)}
+  .controls{display:flex;flex-wrap:wrap;gap:14px 22px;align-items:flex-end;margin-bottom:14px}
+  .ctl{display:flex;flex-direction:column;gap:4px}
+  .ctl label{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .ctl.primary label{color:var(--brass-dark)}
+  select,input[type=number]{font:inherit;padding:6px 8px;border:1px solid #cbbc9c;border-radius:6px;
+        background:#fff;color:var(--ink);min-width:70px}
+  .ctl.primary select{border-color:var(--brass);border-width:2px}
+  .rootrow{display:flex;gap:4px;align-items:center}
+  .nudge{font:15px/1 inherit;padding:6px 9px;border-radius:6px;border:1px solid #cbbc9c;
+         background:#fff;color:var(--brass-dark);cursor:pointer}
+  .nudge:hover{background:#f0e6cd}
+  .check{display:flex;align-items:center;gap:6px;font-size:13px;padding-bottom:7px}
+  .check input{transform:scale(1.1)}
+  .main{display:grid;grid-template-columns:330px 1fr;gap:14px;align-items:start}
+  @media (max-width:820px){.main{grid-template-columns:1fr}}
+  .list-head{font-size:12px;color:var(--muted);margin-bottom:8px}
+  .filterrow{display:flex;gap:10px;margin-bottom:8px;align-items:center}
+  .filterrow select{flex:1;font:13px ui-monospace,Menlo,Consolas,monospace;padding:6px 8px;
+        border:1px solid #cbbc9c;border-radius:6px;min-width:0;background:#fff;color:var(--ink)}
+  .patlist{max-height:560px;overflow-y:auto;display:flex;flex-direction:column;gap:2px}
+  .pat{font:12px ui-monospace,Menlo,Consolas,monospace;padding:5px 8px;border-radius:5px;
+       cursor:pointer;border-left:3px solid transparent;display:flex;gap:8px;white-space:nowrap;align-items:center}
+  .pat:hover{background:#f3ecd9}
+  .pat.sel{background:#f0e6cd;border-left-color:var(--brass);font-weight:600}
+  .pat .no{color:var(--muted);min-width:40px}
+  .pat .spark{flex-shrink:0}
+  .pat .hint{margin-left:auto;color:var(--brass-dark);font-size:11px;overflow:hidden;text-overflow:ellipsis;max-width:96px}
+  .warn{color:var(--accent);font-size:13px;padding:8px 4px;line-height:1.5}
+  .vizhead{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:baseline;margin-bottom:2px;font-size:13px}
+  .vizhead .pname{font-weight:700;font-size:15px}
+  .vizhead .principals{color:var(--muted)}
+  .viewtog{margin-left:auto;display:flex;gap:0;border:1px solid var(--brass);border-radius:6px;overflow:hidden}
+  .viewtog button{border:none;border-radius:0;background:transparent;color:var(--brass-dark);
+                  font-size:12px;padding:4px 10px;cursor:pointer}
+  .viewtog button.on{background:var(--brass);color:#fff}
+  .vibe{font-family:Georgia,serif;font-style:italic;font-size:13.5px;color:#8a6d3a;margin:0 0 10px}
+  .rollwrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:#fffef9;padding:8px 4px}
+  .stats{color:var(--muted);font-size:12.5px;margin-top:8px}
+  .harm{margin-top:10px;border-top:1px dashed var(--line);padding-top:10px;font-size:13px;
+        display:flex;flex-direction:column;gap:7px}
+  .harm .story{font-family:Georgia,serif;font-style:italic;font-size:14px;color:var(--ink)}
+  .harm .story b{color:var(--brass-dark)}
+  .harm .row{display:flex;flex-wrap:wrap;gap:5px;align-items:baseline;line-height:1.7}
+  .harm .lbl{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em;
+             font-weight:600;min-width:118px}
+  .harm .pcs{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;margin-right:6px}
+  .chip{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12.5px;white-space:nowrap}
+  .chip.exact{background:var(--brass);color:#fff;font-weight:600}
+  .chip.fit{background:#efe7d2;color:var(--ink);border:1px solid var(--line)}
+  .chip.none{color:var(--muted);font-style:italic;padding-left:0}
+  .btns{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:12px;align-items:center}
+  button{font:inherit;font-size:14px;padding:7px 14px;border-radius:6px;border:1px solid var(--brass-dark);
+         background:var(--brass);color:#fff;cursor:pointer}
+  button:hover{background:var(--brass-dark)}
+  button.ghost{background:transparent;color:var(--brass-dark)}
+  button.ghost:hover{background:#f0e6cd}
+  button:disabled{opacity:.45;cursor:default}
+  #play{font-size:15px;padding:8px 20px}
+  .mini{display:flex;gap:5px;align-items:center;font-size:12.5px;color:var(--muted);white-space:nowrap}
+  .legend{display:flex;gap:16px;font-size:12px;color:var(--muted);margin-top:6px;align-items:center}
+  .swatch{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+  footer{margin-top:18px;font-size:12.5px;color:var(--muted);line-height:1.6;max-width:900px}
+  footer b{color:var(--ink)}
+</style>
+</head>
+<body>
+
+<h1>Slonimsky Pattern Lab <span class="tag">the Thesaurus, trumpet-sized</span></h1>
+<p class="sub">Pick a slice of the octave, decorate it, and it becomes a line &mdash; the same machine behind all 1,330 patterns
+in the book Coltrane shedded from. Everything is <b>written pitch for B&flat; trumpet</b>.
+Loop one over the drone until it sits. Then nudge the root up a half-step and go again.</p>
+
+<div class="card controls">
+  <div class="ctl primary">
+    <label>1 · Division (principal tones)</label>
+    <select id="division"></select>
+  </div>
+  <div class="ctl primary">
+    <label>2 · Polation</label>
+    <select id="polation"></select>
+  </div>
+  <div class="ctl primary">
+    <label>3 · Notes per principal</label>
+    <select id="count"></select>
+  </div>
+  <div class="ctl">
+    <label>Root (written)</label>
+    <div class="rootrow">
+      <button class="nudge" id="dnRoot" title="down a half-step">&minus;</button>
+      <select id="root"></select>
+      <button class="nudge" id="upRoot" title="up a half-step">+</button>
+    </div>
+  </div>
+  <div class="ctl">
+    <label>Direction</label>
+    <select id="direction">
+      <option value="asc">Ascending</option>
+      <option value="both" selected>Ascend + descend</option>
+      <option value="desc">Descending</option>
+    </select>
+  </div>
+  <div class="ctl">
+    <label>Tempo (&#9834; = 8ths)</label>
+    <input type="number" id="tempo" min="40" max="240" step="4" value="96">
+  </div>
+  <div class="check"><input type="checkbox" id="fold" checked>
+    <span>Fold into trumpet range (written F&#9839;3&ndash;C6)</span></div>
+  <div class="check"><input type="checkbox" id="concert">
+    <span>Sound at concert pitch (&minus;2)</span></div>
+</div>
+
+<div class="main">
+  <div class="card">
+    <div class="filterrow">
+      <select id="chordSel"><option value="">All patterns</option></select>
+    </div>
+    <div class="list-head" id="listHead"></div>
+    <div class="patlist" id="patlist"></div>
+  </div>
+
+  <div class="card">
+    <div class="vizhead">
+      <span class="pname" id="pname">&mdash;</span>
+      <span class="principals" id="principals"></span>
+      <span class="viewtog">
+        <button id="vStaff" class="on">Notation</button>
+        <button id="vRoll">Piano roll</button>
+      </span>
+    </div>
+    <div class="vibe" id="vibe"></div>
+    <div class="rollwrap" id="rollwrap"></div>
+    <div class="legend">
+      <span><span class="swatch" style="background:var(--brass)"></span>principal tone</span>
+      <span><span class="swatch" style="background:#4a4238"></span>ornament</span>
+      <span><span class="swatch" style="background:var(--accent)"></span>playing</span>
+    </div>
+    <div class="stats" id="stats"></div>
+    <div class="harm" id="harm"></div>
+    <div class="btns">
+      <button id="play">&#9654; Play</button>
+      <button id="stopBtn" class="ghost">&#9632; Stop</button>
+      <label class="mini"><input type="checkbox" id="loopCk"> loop</label>
+      <label class="mini"><input type="checkbox" id="droneCk"> drone</label>
+      <label class="mini"><input type="checkbox" id="autoCk" checked> play on select</label>
+      <button id="dice" class="ghost">&#127922; Surprise me</button>
+      <button id="dlOne" class="ghost">&#8681; .mid</button>
+      <button id="dlAll" class="ghost">&#8681; family .mid</button>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <b>The system:</b> a <b>division</b> splits one or more octaves into equal parts &mdash; the <i>principal tones</i>.
+  Each principal carries ornaments: <b>interpolation</b> passes inside the gap, <b>infrapolation</b> dips below,
+  <b>ultrapolation</b> overshoots the next principal before landing. Combined forms play their ornaments in the order named.
+  The chord menu lists what this family actually outlines &mdash; pick a sound, get the patterns that spell it.
+</footer>
+
+<script>
+'use strict';
+
+/* ---------- data ---------- */
+const DIVISIONS = [
+  {id:'tritone',   name:'Tritone — octave ÷ 2 (aug 4th)',            interval:6, octaves:1},
+  {id:'ditone',    name:'Ditone — octave ÷ 3 (major 3rds)',          interval:4, octaves:1},
+  {id:'sesqui',    name:'Sesquitone — octave ÷ 4 (minor 3rds)',      interval:3, octaves:1},
+  {id:'wholetone', name:'Whole-tone — octave ÷ 6',                   interval:2, octaves:1},
+  {id:'semitone',  name:'Semitone — octave ÷ 12 (chromatic)',        interval:1, octaves:1},
+  {id:'quadritone',name:'Quadritone — 2 octaves ÷ 3 (minor 6ths)',   interval:8, octaves:2},
+  {id:'sesquiquad',name:'Sesquiquadritone — 3 octaves ÷ 4 (major 6ths)', interval:9, octaves:3},
+  {id:'diatessaron',name:'Diatessaron — 5 octaves ÷ 12 (perfect 4ths)',  interval:5, octaves:5},
+  {id:'diapente',  name:'Diapente — 7 octaves ÷ 12 (perfect 5ths)',      interval:7, octaves:7},
+];
+const POLATIONS = [
+  {id:'inter',  name:'Interpolation',              parts:['inter'],                 counts:[1,2,3]},
+  {id:'infra',  name:'Infrapolation',              parts:['infra'],                 counts:[1,2]},
+  {id:'ultra',  name:'Ultrapolation',              parts:['ultra'],                 counts:[1,2]},
+  {id:'ii',     name:'Infra-interpolation',        parts:['infra','inter'],         counts:[2]},
+  {id:'iu',     name:'Infra-ultrapolation',        parts:['infra','ultra'],         counts:[2]},
+  {id:'tu',     name:'Inter-ultrapolation',        parts:['inter','ultra'],         counts:[2]},
+  {id:'iiu',    name:'Infra-inter-ultrapolation',  parts:['infra','inter','ultra'], counts:[3]},
+];
+const VIBES = {
+  tritone:'The octave cut clean in half — two poles, maximum tension. This is where the book begins.',
+  ditone:'Three major thirds — the Giant Steps grid. Coltrane country.',
+  sesqui:'Four minor thirds — diminished territory, the bebop workhorse.',
+  wholetone:'Six even steps and no gravity — Debussy’s fog.',
+  semitone:'The full chromatic — every door open, no key in sight.',
+  quadritone:'Minor sixths striding past the octave — big intervals that sing.',
+  sesquiquad:'Major sixths stacked through three octaves, folded back to fit the horn.',
+  diatessaron:'The circle of fourths in disguise — the most trumpet-friendly cycle there is.',
+  diapente:'The circle of fifths — the long way home.',
+};
+const POLVIBE = {
+  inter:'passing tones inside each gap',
+  infra:'a dip below each step before moving on',
+  ultra:'overshoot the target, then fall in',
+  ii:'dip, then climb through — a valley on every step',
+  iu:'the wide enclosure — under, over, land',
+  tu:'through and past — momentum lines',
+  iiu:'the full enclosure — under, through, over, arrive',
+};
+const NEIGHBOR_MAX = 5;
+const LIST_CAP = 400;
+const FOLD_MIN = 54, FOLD_MAX = 84;   // written F#3 .. C6
+const NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const noteName = m => NAMES[m%12] + (Math.floor(m/12)-1);
+
+/* ---------- spelling (for notation) ---------- */
+const SHARP=[['C',0],['C',1],['D',0],['D',1],['E',0],['F',0],['F',1],['G',0],['G',1],['A',0],['A',1],['B',0]];
+const FLAT =[['C',0],['D',-1],['D',0],['E',-1],['E',0],['F',0],['G',-1],['G',0],['A',-1],['A',0],['B',-1],['B',0]];
+const LETTER_IDX={C:0,D:1,E:2,F:3,G:4,A:5,B:6};
+const ACC_GLYPH={ '1':'♯', '-1':'♭', '0':'♮' };
+function spell(m,prev){
+  const pc=((m%12)+12)%12, oct=Math.floor(m/12)-1;
+  const t=(prev!==null && m<prev)?FLAT:SHARP;
+  const [L,acc]=t[pc];
+  return {letter:L, acc, diat:oct*7+LETTER_IDX[L]};
+}
+
+/* ---------- harmony dictionary ---------- */
+const RNAMES=['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B'];
+/* [quality, intervals, allowFits, isScale] */
+const FORMULAS=[
+  ['maj',[0,4,7],1,0],['m',[0,3,7],1,0],['dim',[0,3,6],1,0],['aug',[0,4,8],1,0],['sus4',[0,5,7],1,0],
+  ['6',[0,4,7,9],1,0],['m6',[0,3,7,9],1,0],
+  ['maj7',[0,4,7,11],1,0],['7',[0,4,7,10],1,0],['m7',[0,3,7,10],1,0],
+  ['m7♭5',[0,3,6,10],1,0],['dim7',[0,3,6,9],1,0],['mMaj7',[0,3,7,11],1,0],
+  ['7sus4',[0,5,7,10],1,0],
+  ['7♭5',[0,4,6,10],1,0],['7♯5',[0,4,8,10],1,0],
+  ['maj7♯5',[0,4,8,11],1,0],['maj7♭5',[0,4,6,11],1,0],
+  ['maj9',[0,2,4,7,11],1,0],['9',[0,2,4,7,10],1,0],['m9',[0,2,3,7,10],1,0],['6/9',[0,2,4,7,9],1,0],
+  ['7♭9',[0,1,4,7,10],1,0],['7♯9',[0,3,4,7,10],1,0],
+  ['7♯11',[0,4,6,7,10],1,0],['maj7♯11',[0,4,6,7,11],1,0],
+  ['m11',[0,3,5,7,10],1,0],['13',[0,4,7,9,10],1,0],
+  ['9♭5',[0,2,4,6,10],1,0],['9♯5',[0,2,4,8,10],1,0],['7♭9♭5',[0,1,4,6,10],1,0],
+  ['whole-tone',[0,2,4,6,8,10],1,1],
+  ['dim (H-W)',[0,1,3,4,6,7,9,10],1,1],
+  ['dim (W-H)',[0,2,3,5,6,8,9,11],1,1],
+  ['augmented scale',[0,3,4,7,8,11],1,1],
+  ['major scale',[0,2,4,5,7,9,11],0,1],
+  ['melodic minor',[0,2,3,5,7,9,11],0,1],
+  ['harmonic minor',[0,2,3,5,7,8,11],0,1],
+  ['major pentatonic',[0,2,4,7,9],0,1],
+  ['minor pentatonic',[0,3,5,7,10],0,1],
+  ['blues scale',[0,3,5,6,7,10],0,1],
+  ['chromatic',[0,1,2,3,4,5,6,7,8,9,10,11],0,1],
+];
+function pcSet(arr){return [...new Set(arr.map(x=>((x%12)+12)%12))].sort((a,b)=>a-b);}
+const PRECOMP=[];
+for(let root=0;root<12;root++)
+  for(const [name,ints,fitOK,scale] of FORMULAS)
+    PRECOMP.push({root,fitOK,scale,name,set:new Set(ints.map(i=>(i+root)%12)),
+                  label:RNAMES[root]+(scale?' ':'')+name});
+function matchSets(pcs,homeRoot){
+  const exact=[], within=[];
+  for(const f of PRECOMP){
+    if(!pcs.every(p=>f.set.has(p))) continue;
+    const e={label:f.label,name:f.name,scale:f.scale,size:f.set.size,rr:(f.root-homeRoot+12)%12};
+    if(f.set.size===pcs.length) exact.push(e);
+    else if(f.fitOK) within.push(e);
+  }
+  exact.sort((a,b)=>a.rr-b.rr);
+  within.sort((a,b)=>a.size-b.size||a.rr-b.rr);
+  return {exact,within};
+}
+const pcNames = pcs => pcs.map(p=>RNAMES[p]).join('·');
+function harmLine(lbl,pcs,m){
+  let chips;
+  if(m.exact.length)
+    chips=m.exact.slice(0,5).map(x=>'<span class="chip exact">'+x.label+'</span>').join('')
+      +(m.exact.length>5?' <span class="chip none">+'+(m.exact.length-5)+' more</span>':'');
+  else if(m.within.length)
+    chips='<span class="chip none">fits:</span>'
+      +m.within.slice(0,4).map(x=>'<span class="chip fit">'+x.label+'</span>').join('')
+      +(m.within.length>4?' <span class="chip none">+'+(m.within.length-4)+' more</span>':'');
+  else chips='<span class="chip none">no standard chord — symmetric cell</span>';
+  return '<div class="row"><span class="lbl">'+lbl+'</span><span class="pcs">'+pcNames(pcs)+'</span>'+chips+'</div>';
+}
+function storyFor(info){
+  const w=info.t.exact[0], c=info.c.exact[0];
+  if(w) return 'Spells <b>'+w.label+'</b> start to finish'
+    +(info.t.exact[1]?' — and <b>'+info.t.exact[1].label+'</b>, same notes from the other pole':'')+'.';
+  if(c) return 'Each cell arpeggiates a <b>'+c.label+'</b> shape, restated around the cycle.';
+  const s=info.t.within.find(e=>e.scale);
+  if(s) return 'No single chord owns it, but it lives inside the <b>'+s.label+'</b> sound.';
+  return 'Pure symmetry — no chord will claim this one. Slonimsky would approve.';
+}
+
+/* ---------- dom ---------- */
+const $ = id => document.getElementById(id);
+const divSel=$('division'), polSel=$('polation'), cntSel=$('count'),
+      rootSel=$('root'), dirSel=$('direction'), tempoIn=$('tempo'),
+      foldCk=$('fold'), concertCk=$('concert');
+
+DIVISIONS.forEach((d,i)=>divSel.add(new Option(d.name,i)));
+POLATIONS.forEach((p,i)=>polSel.add(new Option(p.name,i)));
+for(let m=54;m<=72;m++) rootSel.add(new Option(noteName(m),m,false,m===60));
+
+/* ---------- enumeration ---------- */
+function combos(pool,k){
+  const out=[];
+  (function rec(start,cur){
+    if(cur.length===k){out.push(cur.slice());return;}
+    for(let i=start;i<pool.length;i++){cur.push(pool[i]);rec(i+1,cur);cur.pop();}
+  })(0,[]);
+  return out;
+}
+function range(a,b){const r=[];for(let x=a;x<=b;x++)r.push(x);return r;}
+
+function enumerateFamily(g,pol,count){
+  const neighbors=range(1,NEIGHBOR_MAX);
+  if(pol.parts.length===1){
+    const part=pol.parts[0];
+    if(part==='inter'){
+      const pool=range(1,g-1);
+      if(count>pool.length) return [];
+      return combos(pool,count).map(c=>c.slice());
+    }
+    if(part==='infra')
+      return combos(neighbors,count).map(c=>c.slice().reverse().map(d=>-d));
+    return combos(neighbors,count).map(c=>c.slice().reverse().map(h=>g+h));
+  }
+  const pools=pol.parts.map(p=>
+    p==='infra' ? neighbors.map(d=>-d) :
+    p==='inter' ? range(1,g-1) :
+                  neighbors.map(h=>g+h));
+  if(pools.some(p=>p.length===0)) return [];
+  let acc=[[]];
+  for(const pool of pools){
+    const next=[];
+    for(const pre of acc) for(const v of pool) next.push(pre.concat(v));
+    acc=next;
+  }
+  return acc;
+}
+
+/* ---------- sequence building ---------- */
+function buildSeq(offsets){
+  const d=DIVISIONS[divSel.value|0];
+  const root=rootSel.value|0, span=12*d.octaves, gaps=span/d.interval;
+  let notes=[];
+  for(let k=0;k<gaps;k++){
+    const P=root+k*d.interval;
+    notes.push({m:P,principal:true});
+    for(const o of offsets) notes.push({m:P+o,principal:false});
+  }
+  notes.push({m:root+span,principal:true});
+  const dir=dirSel.value;
+  if(dir==='desc') notes=notes.slice().reverse();
+  if(dir==='both') notes=notes.concat(notes.slice().reverse().slice(1));
+  if(foldCk.checked){
+    // fold whole cells (principal + its ornaments), never mid-cell:
+    // each cell keeps its exact interval shape; when a cell would leave the
+    // range, the entire cell jumps an octave (or more) instead.
+    const cells=[]; let cur=null;
+    notes.forEach(n=>{ if(n.principal||!cur){cur=[];cells.push(cur);} cur.push(n); });
+    const out=[]; let kPrev=0, prevP=null;
+    for(const c of cells){
+      const lo=Math.min(...c.map(n=>n.m)), hi=Math.max(...c.map(n=>n.m));
+      const P=c[0].m;                       // raw principal of this cell
+      let k=kPrev;
+      if(lo+k<FOLD_MIN || hi+k>FOLD_MAX){
+        // forced fold: reset the register with maximum runway in the line's
+        // direction of travel — a descending line leaps back to the top and
+        // keeps descending (and vice versa). Nearest-fit would creep by steps
+        // and turn leap-language into chromatic runs.
+        const valid=[];
+        for(let kk=-120;kk<=120;kk+=12)
+          if(lo+kk>=FOLD_MIN && hi+kk<=FOLD_MAX) valid.push(kk);
+        if(valid.length){
+          const dir = prevP===null ? 0 : Math.sign(P-prevP);
+          if(dir<0)      k=Math.max(...valid);          // descending → reset high
+          else if(dir>0) k=Math.min(...valid);          // ascending  → reset low
+          else           k=valid.reduce((a,b)=>Math.abs(b)<Math.abs(a)?b:a);
+        }
+      }
+      c.forEach(n=>out.push({m:n.m+k, principal:n.principal}));
+      kPrev=k; prevP=P;
+    }
+    notes=out;
+  }
+  return notes;
+}
+const offsetsLabel = offs => offs.map(o=>(o<0?'−':'+')+Math.abs(o)).join(' ');
+
+/* ---------- harmony helpers ---------- */
+function cellPCs(offsets){
+  const d=DIVISIONS[divSel.value|0], root=(rootSel.value|0)%12;
+  return pcSet([0,...offsets,d.interval].map(x=>x+root));
+}
+function totalPCs(offsets){
+  const d=DIVISIONS[divSel.value|0], root=(rootSel.value|0)%12;
+  const gaps=12*d.octaves/d.interval, all=[0];
+  for(let k=0;k<gaps;k++){const b=k*d.interval; all.push(b); for(const o of offsets) all.push(b+o);}
+  return pcSet(all.map(x=>x+root));
+}
+
+/* ---------- state / refresh ---------- */
+let family=[], familyInfo=[], baseHead='', selIdx=-1, viewMode='staff';
+
+function syncCountOptions(){
+  const pol=POLATIONS[polSel.value|0];
+  const keep=+cntSel.value;
+  cntSel.innerHTML='';
+  pol.counts.forEach(c=>cntSel.add(new Option(c,c)));
+  cntSel.value=pol.counts.includes(keep)?keep:pol.counts[0];
+  cntSel.disabled=pol.counts.length===1;
+}
+
+function sparkline(offs){
+  const d=DIVISIONS[divSel.value|0];
+  const pts=[0,...offs,d.interval];
+  const lo=Math.min(...pts), hi=Math.max(...pts), rng=(hi-lo)||1;
+  const W=52,H=16,P=2.5;
+  const xy=pts.map((p,i)=>
+    (P+i*(W-2*P)/(pts.length-1)).toFixed(1)+','+(H-P-(p-lo)*(H-2*P)/rng).toFixed(1));
+  return '<svg class="spark" width="'+W+'" height="'+H+'"><polyline points="'+xy.join(' ')
+    +'" fill="none" stroke="#b08a3e" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"/></svg>';
+}
+
+function refresh(){
+  stopPlayback();
+  const d=DIVISIONS[divSel.value|0], pol=POLATIONS[polSel.value|0], count=+cntSel.value;
+  const all=enumerateFamily(d.interval,pol,count);
+  family=all.slice(0,LIST_CAP);
+  const list=$('patlist'); list.innerHTML='';
+  if(all.length===0){
+    $('listHead').textContent='';
+    list.innerHTML='<div class="warn">No patterns: this polation needs more room than a '
+      + d.interval + '-semitone gap allows. Try a wider division or fewer notes.</div>';
+    selIdx=-1; familyInfo=[]; drawSelected(); return;
+  }
+  baseHead = all.length+' pattern'+(all.length>1?'s':'')+' in this family'
+      + (all.length>LIST_CAP ? ' — showing first '+LIST_CAP : '');
+  const rootPC=(rootSel.value|0)%12;
+  familyInfo=family.map(offs=>{
+    const cp=cellPCs(offs), tp=totalPCs(offs);
+    const c=matchSets(cp,rootPC), t=matchSets(tp,rootPC);
+    const exactQuals=new Set([...t.exact,...c.exact].map(e=>e.name));
+    const soundQuals=new Set([...t.within,...c.within].filter(e=>e.scale).map(e=>e.name));
+    [...t.exact,...c.exact].filter(e=>e.scale).forEach(e=>soundQuals.add(e.name));
+    return {cp, tp, c, t, exactQuals, soundQuals};
+  });
+  buildChordMenu();
+  family.forEach((offs,i)=>{
+    const el=document.createElement('div');
+    el.className='pat'; el.dataset.i=i;
+    const info=familyInfo[i];
+    const h=(info.t.exact[0]||info.c.exact[0]||{}).label
+          ||(info.t.within.find(e=>e.scale) ? '≈ '+info.t.within.find(e=>e.scale).name : '');
+    el.innerHTML='<span class="no">No. '+(i+1)+'</span>'+sparkline(offs)
+      +'<span>'+offsetsLabel(offs)+'</span>'
+      +(h?'<span class="hint">'+h+'</span>':'');
+    el.onclick=()=>{selectPat(i,true);};
+    list.appendChild(el);
+  });
+  selectPat(0,false);
+  applyFilter();
+}
+
+function selectPat(i,playIt){
+  stopPlayback();
+  selIdx=i;
+  document.querySelectorAll('.pat').forEach(el=>el.classList.toggle('sel',+el.dataset.i===i));
+  drawSelected();
+  if(playIt && $('autoCk').checked) play();
+}
+
+/* ---------- chord filter (quality-level) ---------- */
+function buildChordMenu(){
+  const sel=$('chordSel'), keep=sel.value;
+  const ex=new Map(), snd=new Map();
+  familyInfo.forEach(info=>{
+    info.exactQuals.forEach(n=>ex.set(n,(ex.get(n)||0)+1));
+    info.soundQuals.forEach(n=>snd.set(n,(snd.get(n)||0)+1));
+  });
+  const sorted=m=>[...m.entries()].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]));
+  sel.innerHTML='';
+  sel.add(new Option('All patterns · '+family.length,''));
+  const og1=document.createElement('optgroup'); og1.label='Outlines (any root)';
+  sorted(ex).forEach(([n,c])=>og1.appendChild(new Option(n+' · '+c,'q:'+n)));
+  if(og1.children.length) sel.appendChild(og1);
+  const og2=document.createElement('optgroup'); og2.label='Sound world';
+  sorted(snd).forEach(([n,c])=>og2.appendChild(new Option(n+' · '+c,'s:'+n)));
+  if(og2.children.length) sel.appendChild(og2);
+  sel.value=keep;
+  if(sel.selectedIndex<0) sel.value='';
+}
+function applyFilter(){
+  if(!family.length) return;
+  const v=$('chordSel').value, q=v.slice(2);
+  let shown=0, firstVis=-1;
+  document.querySelectorAll('.pat').forEach(el=>{
+    const i=+el.dataset.i, info=familyInfo[i];
+    const ok=!v || (v[0]==='q' ? info.exactQuals.has(q) : info.soundQuals.has(q)||info.exactQuals.has(q));
+    el.style.display=ok?'':'none';
+    if(ok){shown++; if(firstVis<0)firstVis=i;}
+  });
+  $('listHead').textContent=baseHead+(v?' · '+shown+' match'+(shown===1?'':'es'):'');
+  if(v && firstVis>=0){
+    const selEl=document.querySelector('.pat.sel');
+    if(!selEl || selEl.style.display==='none') selectPat(firstVis,true);
+  }
+}
+
+/* ---------- staff notation rendering ---------- */
+const INK='#2a241c', BRASS='#a5731c';
+function renderStaff(notes){
+  const hs=5.5, STEM=7*hs, NX=Math.round(hs*5.2), GX=10, PADL=94;
+  let prev=null;
+  const sp=notes.map(n=>{const s=spell(n.m,prev);prev=n.m;return s;});
+  // structural beam groups: one per principal tone
+  const groups=[]; let cur=null;
+  notes.forEach((n,i)=>{ if(n.principal||!cur){cur=[];groups.push(cur);} cur.push(i); });
+  const s0=groups[0].length;                       // eighths per group
+  const perBar = s0===3 ? 2 : s0===2 ? 4 : 2;      // groups per measure
+  const tsig  = s0===3 ? ['6','8'] : ['4','4'];
+  // layout: accidental decisions are measure-scoped (modern convention)
+  const xs=new Array(notes.length), glyphs=new Array(notes.length).fill('');
+  const barXs=[]; let accState={}; let x=PADL;
+  groups.forEach((g,gi)=>{
+    if(gi>0 && gi%perBar===0){ barXs.push(x-1); x+=16; accState={}; }
+    g.forEach(i=>{
+      const key=sp[i].letter+Math.floor(notes[i].m/12);
+      const st=(key in accState)?accState[key]:0;
+      if(sp[i].acc!==st){ glyphs[i]=ACC_GLYPH[String(sp[i].acc)]; accState[key]=sp[i].acc; }
+      if(glyphs[i]) x+=9;                          // engraving: leave room before an accidental
+      xs[i]=x; x+=NX;
+    });
+    x+=GX;
+  });
+  const W=x+22;
+  const diats=sp.map(s=>s.diat);
+  const maxD=Math.max(38,...diats), minD=Math.min(28,...diats);
+  const yTop=32+Math.max(0,maxD-38)*hs;
+  const y=d=>yTop+(38-d)*hs;
+  const H=y(minD)+STEM+16;
+  let s='<svg id="score" width="'+W+'" height="'+H+'" xmlns="http://www.w3.org/2000/svg">';
+  for(let d=30;d<=38;d+=2)
+    s+='<line x1="6" y1="'+y(d)+'" x2="'+(W-8)+'" y2="'+y(d)+'" stroke="#a99c80" stroke-width="1"/>';
+  s+='<text x="10" y="'+(y(30)+16)+'" font-size="75" font-family="serif" fill="'+INK+'">𝄞</text>';
+  s+='<text x="70" y="'+(y(34)-1.5)+'" text-anchor="middle" font-size="20" font-weight="bold" font-family="Georgia,serif" fill="'+INK+'">'+tsig[0]+'</text>';
+  s+='<text x="70" y="'+(y(30)-1.5)+'" text-anchor="middle" font-size="20" font-weight="bold" font-family="Georgia,serif" fill="'+INK+'">'+tsig[1]+'</text>';
+  barXs.forEach(bx=>{ s+='<line x1="'+bx+'" y1="'+y(38)+'" x2="'+bx+'" y2="'+y(30)+'" stroke="#6b6154" stroke-width="1"/>'; });
+  // final double bar
+  s+='<line x1="'+(W-16)+'" y1="'+y(38)+'" x2="'+(W-16)+'" y2="'+y(30)+'" stroke="#6b6154" stroke-width="1"/>';
+  s+='<rect x="'+(W-12)+'" y="'+y(38)+'" width="3.5" height="'+(y(30)-y(38))+'" fill="'+INK+'"/>';
+  groups.forEach(g=>{
+    const gy=g.map(i=>y(diats[i]));
+    const up=(g.reduce((a,i)=>a+diats[i],0)/g.length)<34;
+    const beamY=up?Math.min(...gy)-STEM:Math.max(...gy)+STEM;
+    g.forEach(i=>{
+      const n=notes[i], cx=xs[i], cy=y(diats[i]);
+      for(let L=28;L>=diats[i];L-=2)
+        s+='<line x1="'+(cx-9.5)+'" y1="'+y(L)+'" x2="'+(cx+9.5)+'" y2="'+y(L)+'" stroke="#8a7f6c" stroke-width="1"/>';
+      for(let L=40;L<=diats[i];L+=2)
+        s+='<line x1="'+(cx-9.5)+'" y1="'+y(L)+'" x2="'+(cx+9.5)+'" y2="'+y(L)+'" stroke="#8a7f6c" stroke-width="1"/>';
+      if(glyphs[i])
+        s+='<text x="'+(cx-8.5)+'" y="'+(cy+4.5)+'" text-anchor="end" font-size="15" font-family="serif" fill="'+INK+'">'+glyphs[i]+'</text>';
+      const fill=n.principal?BRASS:'#4a4238';
+      const stemX=up?cx+5.1:cx-5.1;
+      s+='<line x1="'+stemX+'" y1="'+cy+'" x2="'+stemX+'" y2="'+(up?beamY+3.6:beamY-3.6)+'" stroke="'+fill+'" stroke-width="1.4"/>';
+      s+='<ellipse id="nh'+i+'" class="nh" data-f="'+fill+'" data-x="'+cx+'" cx="'+cx+'" cy="'+cy
+        +'" rx="5.7" ry="4.2" transform="rotate(-18 '+cx+' '+cy+')" fill="'+fill+'"/>';
+    });
+    if(g.length>1){
+      const x1=up?xs[g[0]]+5.1:xs[g[0]]-5.1, x2=up?xs[g[g.length-1]]+5.1:xs[g[g.length-1]]-5.1;
+      s+='<rect x="'+(x1-0.7)+'" y="'+(up?beamY:beamY-4)+'" width="'+(x2-x1+1.4)+'" height="4" fill="'+INK+'"/>';
+    }
+  });
+  s+='</svg>';
+  return s;
+}
+
+/* ---------- piano roll rendering ---------- */
+function renderRoll(notes){
+  const NW=30, RH=10, PAD=8;
+  const ms=notes.map(n=>n.m), lo=Math.min(...ms)-1, hi=Math.max(...ms)+1;
+  const W=notes.length*NW+PAD*2, H=(hi-lo+1)*RH+22;
+  const y=m=>(hi-m)*RH+4;
+  let s='<svg id="roll" width="'+W+'" height="'+H+'" xmlns="http://www.w3.org/2000/svg">';
+  for(let m=lo;m<=hi;m++) if(m%12===0)
+    s+='<line x1="0" y1="'+(y(m)+RH/2)+'" x2="'+W+'" y2="'+(y(m)+RH/2)+'" stroke="#e8dfc9" stroke-width="1"/>';
+  notes.forEach((n,i)=>{
+    const fill=n.principal?BRASS:'#4a4238';
+    s+='<rect id="nh'+i+'" class="nh" data-f="'+fill+'" data-x="'+(PAD+i*NW)+'" x="'+(PAD+i*NW)
+      +'" y="'+y(n.m)+'" width="'+(NW-6)+'" height="'+(RH-2)+'" rx="2" fill="'+fill+'"/>';
+    s+='<text x="'+(PAD+i*NW+(NW-6)/2)+'" y="'+(H-6)+'" text-anchor="middle" font-size="9" '
+      +'font-family="ui-monospace,Menlo,monospace" fill="'+(n.principal?'#7e5613':'#8a7f6c')+'">'
+      +noteName(n.m)+'</text>';
+  });
+  s+='</svg>';
+  return s;
+}
+
+/* ---------- draw ---------- */
+function drawSelected(){
+  const wrap=$('rollwrap');
+  const havePat=selIdx>=0;
+  ['play','stopBtn','dlOne','dlAll'].forEach(id=>$(id).disabled=!havePat);
+  if(!havePat){
+    $('pname').textContent='—'; $('principals').textContent='';
+    $('vibe').textContent=''; $('stats').textContent=''; $('harm').innerHTML='';
+    wrap.innerHTML=''; return;
+  }
+  const d=DIVISIONS[divSel.value|0], pol=POLATIONS[polSel.value|0];
+  const offs=family[selIdx], notes=buildSeq(offs);
+  $('pname').textContent=pol.name+' No. '+(selIdx+1)+'  ('+offsetsLabel(offs)+')';
+  const root=rootSel.value|0, gaps=12*d.octaves/d.interval;
+  const prin=[]; for(let k=0;k<=gaps;k++) prin.push(noteName(root+k*d.interval));
+  $('principals').textContent='principals: '+prin.join(' · ');
+  $('vibe').textContent=VIBES[d.id]+' Here: '+POLVIBE[pol.id]+'.';
+
+  wrap.innerHTML = viewMode==='staff' ? renderStaff(notes) : renderRoll(notes);
+
+  const ms=notes.map(n=>n.m), span=Math.max(...ms)-Math.min(...ms);
+  $('stats').textContent=notes.length+' notes · written range '+noteName(Math.min(...ms))
+    +'–'+noteName(Math.max(...ms))+' ('+span+' st)'
+    +(foldCk.checked?' · folded to F#3–C6':'')
+    +(concertCk.checked?' · sounding −2':'');
+
+  const info=familyInfo[selIdx];
+  $('harm').innerHTML =
+    '<div class="story">'+storyFor(info)+'</div>'
+    + harmLine('One cell ('+noteName(root)+'→'+noteName(root+d.interval)+')',info.cp,info.c)
+    + harmLine('Whole pattern',info.tp,info.t);
+}
+
+/* ---------- playback ---------- */
+let actx=null, master=null, send=null, playing=false, timers=[], liveNodes=[], drone=null;
+function audioInit(){
+  if(actx) return;
+  actx=new (window.AudioContext||window.webkitAudioContext)();
+  const lp=actx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=3400;
+  master=actx.createGain(); master.gain.value=0.9;
+  master.connect(lp); lp.connect(actx.destination);
+  // a little room: feedback delay
+  send=actx.createDelay(0.6); send.delayTime.value=0.17;
+  const fb=actx.createGain(); fb.gain.value=0.26;
+  const tone=actx.createBiquadFilter(); tone.type='lowpass'; tone.frequency.value=1700;
+  send.connect(tone); tone.connect(fb); fb.connect(send);
+  const wet=actx.createGain(); wet.gain.value=0.17;
+  send.connect(wet); wet.connect(lp);
+}
+function voice(m,t,dur,vel){
+  const f=440*Math.pow(2,(m-69)/12);
+  const o1=actx.createOscillator(); o1.type='triangle'; o1.frequency.value=f;
+  const o2=actx.createOscillator(); o2.type='sawtooth'; o2.frequency.value=f; o2.detune.value=6;
+  const g2=actx.createGain(); g2.gain.value=0.28; o2.connect(g2);
+  const vf=actx.createBiquadFilter(); vf.type='lowpass'; vf.frequency.value=2300;
+  const vg=actx.createGain();
+  vg.gain.setValueAtTime(0.0001,t);
+  vg.gain.exponentialRampToValueAtTime(vel,t+0.014);
+  vg.gain.setValueAtTime(vel,t+dur*0.62);
+  vg.gain.exponentialRampToValueAtTime(0.0001,t+dur*0.98);
+  o1.connect(vf); g2.connect(vf); vf.connect(vg);
+  vg.connect(master); vg.connect(send);
+  o1.start(t); o2.start(t); o1.stop(t+dur+0.02); o2.stop(t+dur+0.02);
+  liveNodes.push(o1,o2);
+}
+function startDrone(rootM,shift){
+  const t=actx.currentTime;
+  const mk=(m,type,g)=>{
+    const o=actx.createOscillator(); o.type=type;
+    o.frequency.value=440*Math.pow(2,(m+shift-69)/12);
+    const og=actx.createGain(); og.gain.setValueAtTime(0.0001,t);
+    og.gain.linearRampToValueAtTime(g,t+0.7);
+    o.connect(og); og.connect(master); o.start(t);
+    return {o,og};
+  };
+  drone=[mk(rootM-12,'triangle',0.055), mk(rootM,'sine',0.028)];
+}
+function stopDrone(){
+  if(!drone) return;
+  const t=actx.currentTime;
+  drone.forEach(({o,og})=>{
+    og.gain.cancelScheduledValues(t);
+    og.gain.setValueAtTime(og.gain.value||0.0001,t);
+    og.gain.linearRampToValueAtTime(0.0001,t+0.4);
+    o.stop(t+0.5);
+  });
+  drone=null;
+}
+function stopPlayback(){
+  playing=false;
+  timers.forEach(clearTimeout); timers=[];
+  liveNodes.forEach(o=>{try{o.stop(0);}catch(e){}}); liveNodes=[];
+  if(actx) stopDrone();
+  document.querySelectorAll('.nh').forEach(el=>el.setAttribute('fill',el.dataset.f));
+}
+function schedulePass(notes,shift,dur,t0){
+  notes.forEach((n,i)=>{
+    const t=t0+i*dur;
+    voice(n.m+shift,t,dur,n.principal?0.30:0.22);
+    const el=$('nh'+i);
+    if(el){
+      timers.push(setTimeout(()=>{
+        el.setAttribute('fill','#c23b22');
+        const wrap=$('rollwrap');
+        wrap.scrollLeft=Math.max(0,(+el.dataset.x)-wrap.clientWidth/2);
+      },Math.max(0,(t-actx.currentTime)*1000)));
+      timers.push(setTimeout(()=>el.setAttribute('fill',el.dataset.f),
+        Math.max(0,(t+dur-actx.currentTime)*1000)));
+    }
+  });
+  return t0+notes.length*dur;
+}
+function play(){
+  if(selIdx<0) return;
+  stopPlayback();
+  audioInit(); actx.resume();
+  playing=true;
+  const notes=buildSeq(family[selIdx]);
+  const shift=concertCk.checked?-2:0;
+  const dur=(60/(+tempoIn.value||96))/2;
+  if($('droneCk').checked) startDrone(rootSel.value|0,shift);
+  const pass=t0=>{
+    if(!playing) return;
+    const tEnd=schedulePass(notes,shift,dur,t0);
+    if($('loopCk').checked){
+      const tNext=tEnd+dur*2;
+      timers.push(setTimeout(()=>pass(tNext),Math.max(0,(tNext-actx.currentTime-0.12)*1000)));
+    }else{
+      timers.push(setTimeout(()=>{if(playing){playing=false;stopDrone();}},
+        Math.max(0,(tEnd-actx.currentTime+0.15)*1000)));
+    }
+  };
+  pass(actx.currentTime+0.1);
+}
+
+/* ---------- midi ---------- */
+function vlq(n){const b=[n&0x7f];n>>=7;while(n>0){b.unshift((n&0x7f)|0x80);n>>=7;}return b;}
+function midiBytes(seqs,bpm,shift){
+  const TPE=240;
+  const t=[];
+  const uspq=Math.round(60000000/bpm);
+  t.push(0,0xFF,0x51,0x03,(uspq>>16)&255,(uspq>>8)&255,uspq&255);
+  t.push(0,0xC0,56);
+  let rest=0;
+  for(const seq of seqs){
+    for(const n of seq){
+      const m=Math.max(0,Math.min(127,n.m+shift));
+      t.push(...vlq(rest),0x90,m,96);
+      t.push(...vlq(TPE),0x80,m,64);
+      rest=0;
+    }
+    rest=960;
+  }
+  t.push(0,0xFF,0x2F,0x00);
+  const len=t.length;
+  const head=[0x4D,0x54,0x68,0x64,0,0,0,6,0,0,0,1,0x01,0xE0,
+              0x4D,0x54,0x72,0x6B,(len>>24)&255,(len>>16)&255,(len>>8)&255,len&255];
+  return new Uint8Array(head.concat(t));
+}
+function download(name,bytes){
+  const url=URL.createObjectURL(new Blob([bytes],{type:'audio/midi'}));
+  const a=document.createElement('a');
+  a.href=url;a.download=name;a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),4000);
+}
+function fileBase(){
+  const d=DIVISIONS[divSel.value|0], pol=POLATIONS[polSel.value|0];
+  return 'slonimsky_'+d.id+'_'+pol.id+'_'+cntSel.value+'n';
+}
+function dlOne(){
+  if(selIdx<0)return;
+  download(fileBase()+'_no'+(selIdx+1)+'.mid',
+    midiBytes([buildSeq(family[selIdx])],+tempoIn.value||96,concertCk.checked?-2:0));
+}
+function dlAll(){
+  if(!family.length)return;
+  download(fileBase()+'_all'+family.length+'.mid',
+    midiBytes(family.map(buildSeq),+tempoIn.value||96,concertCk.checked?-2:0));
+}
+
+/* ---------- dice ---------- */
+function rollDice(){
+  for(let tries=0;tries<12;tries++){
+    divSel.value=Math.floor(Math.random()*DIVISIONS.length);
+    polSel.value=Math.floor(Math.random()*POLATIONS.length);
+    syncCountOptions();
+    const pol=POLATIONS[polSel.value|0];
+    cntSel.value=pol.counts[Math.floor(Math.random()*pol.counts.length)];
+    $('chordSel').value='';
+    refresh();
+    if(family.length){ selectPat(Math.floor(Math.random()*family.length),true); return; }
+  }
+}
+
+/* ---------- wiring ---------- */
+polSel.onchange=()=>{syncCountOptions();refresh();};
+[divSel,cntSel,rootSel,dirSel,foldCk,concertCk].forEach(el=>el.onchange=refresh);
+tempoIn.onchange=()=>{if(selIdx>=0)drawSelected();};
+$('dnRoot').onclick=()=>{nudgeRoot(-1);};
+$('upRoot').onclick=()=>{nudgeRoot(1);};
+function nudgeRoot(d){
+  const i=rootSel.selectedIndex+d;
+  if(i<0||i>=rootSel.options.length) return;
+  const keep=selIdx;
+  rootSel.selectedIndex=i;
+  refresh();
+  if(keep>=0&&keep<family.length) selectPat(keep,true);
+}
+$('play').onclick=play;
+$('stopBtn').onclick=stopPlayback;
+$('dice').onclick=rollDice;
+$('dlOne').onclick=dlOne;
+$('dlAll').onclick=dlAll;
+$('chordSel').onchange=applyFilter;
+$('vStaff').onclick=()=>{viewMode='staff';$('vStaff').classList.add('on');$('vRoll').classList.remove('on');drawSelected();};
+$('vRoll').onclick=()=>{viewMode='roll';$('vRoll').classList.add('on');$('vStaff').classList.remove('on');drawSelected();};
+
+syncCountOptions();
+refresh();
+</script>
+</body>
+</html>
