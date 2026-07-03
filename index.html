@@ -37,11 +37,10 @@
   .rchip{font:12px ui-monospace,Menlo,Consolas,monospace;padding:3px 10px;border:1px solid var(--line);
          border-radius:12px;background:#fff;color:var(--brass-dark);cursor:pointer;white-space:nowrap}
   .rchip:hover{background:#f0e6cd;border-color:var(--brass)}
-  .main{display:grid;grid-template-columns:330px 1fr;gap:14px;align-items:start}
+  .main{display:grid;grid-template-columns:1fr;gap:14px;align-items:start}
   .main>.card{min-width:0}
+  .main>.card:first-child{order:2}   /* notation gets the full width, first; pattern list below */
   @media (max-width:820px){
-    .main{grid-template-columns:1fr}
-    .main>.card:first-child{order:2}          /* notation + play controls first on phones */
     .patlist{max-height:35vh}
     select,input[type=number],.filterrow select{font-size:16px}  /* stop iOS focus-zoom */
   }
@@ -55,10 +54,11 @@
     .rollwrap{overflow:visible;border:none}
   }
   .list-head{font-size:12px;color:var(--muted);margin-bottom:8px}
-  .filterrow{display:flex;gap:10px;margin-bottom:8px;align-items:center}
+  .filterrow{display:flex;gap:10px;margin-bottom:8px;align-items:center;max-width:460px}
   .filterrow select{flex:1;font:13px ui-monospace,Menlo,Consolas,monospace;padding:6px 8px;
         border:1px solid #cbbc9c;border-radius:6px;min-width:0;background:#fff;color:var(--ink)}
-  .patlist{max-height:560px;overflow-y:auto;display:flex;flex-direction:column;gap:2px}
+  .patlist{max-height:320px;overflow-y:auto;display:grid;align-content:start;
+           grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:2px 14px}
   .pat{font:12px ui-monospace,Menlo,Consolas,monospace;padding:5px 8px;border:0;border-radius:5px;
        border-left:3px solid transparent;background:none;color:inherit;width:100%;text-align:left;
        cursor:pointer;display:flex;gap:8px;white-space:nowrap;align-items:center}
@@ -639,7 +639,7 @@ const INK='#2a241c', BRASS='#9a640c', ORN='#5d5548';
 // Bravura gClef outline (SIL OFL) — vector path, identical metrics on every platform
 const CLEF_D='M470 943C503 943 530 916 530 861C530 792 497 728 419 650C403 634 379 611 356 591C349 585 345 586 343 599C339 625 337 659 337 691C337 847 409 943 470 943ZM430 103C428 115 429 118 441 117C522 110 589 42 589 -46C589 -109 551 -160 495 -188C483 -194 481 -194 479 -182ZM361 262C364 243 364 244 346 238C258 208 201 129 201 44C201 -46 248 -110 316 -133C324 -136 336 -139 343 -139C351 -139 355 -134 355 -128C355 -121 347 -118 340 -115C298 -97 268 -54 268 -8C268 49 307 92 368 109C384 113 386 112 388 101L438 -197C440 -208 439 -208 424 -211C408 -214 388 -216 368 -216C193 -216 80 -119 80 20C80 79 90 158 173 252C233 319 279 356 326 394C336 402 338 401 340 390ZM376 415C374 427 376 428 382 434C398 449 419 470 438 491C522 583 572 702 572 815C572 902 548 988 507 1048C492 1070 466 1098 455 1098C441 1098 410 1072 390 1050C316 968 292 843 292 739C292 681 299 616 306 575C308 563 309 561 297 551C233 498 164 437 112 373C43 287 0 194 0 87C0 -87 119 -252 364 -252C387 -252 413 -250 433 -246C444 -244 446 -243 448 -255C460 -322 475 -409 475 -456C475 -604 375 -622 316 -622C262 -622 236 -606 236 -593C236 -586 245 -583 268 -576C299 -567 335 -540 335 -482C335 -427 300 -380 239 -380C172 -380 132 -433 132 -495C132 -560 171 -658 322 -658C389 -658 519 -628 519 -458C519 -401 501 -306 490 -244C488 -232 489 -233 503 -227C604 -187 671 -102 671 11C671 139 577 252 430 252C404 252 404 252 401 270Z';
 function renderStaff(notes,availW){
-  const hs=5.5, STEM=7*hs, GX=10, PADL=94, PADS=46, ACCW=9, BARW=14;
+  const hs=5.5, STEM=7*hs, GX=8, PADL=94, PADS=46, ACCW=9, BARW=12;
   availW=availW||900;
   let prev=null;
   // principals always spell from the sharp table (matches the principals readout);
@@ -672,7 +672,7 @@ function renderStaff(notes,availW){
   // legibility first: tighten note SPACING to fit narrow screens; note size is sacred
   const mNat=(m,nx)=>m.reduce((w,g)=>w+g.reduce((v,i)=>v+nx+(glyphs[i]?ACCW:0),0)+GX,0)+BARW;
   let NX=Math.round(hs*5.2);
-  while(NX>19 && 70+Math.max(...measures.map(m=>mNat(m,NX)))>availW) NX--;
+  while(NX>16 && 70+Math.max(...measures.map(m=>mNat(m,NX)))>availW) NX--;
   const flowW=Math.max(300,availW);
   // flow measures into systems
   const systems=[]; let sys=[], fx=PADL;
