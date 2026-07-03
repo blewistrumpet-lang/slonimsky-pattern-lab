@@ -177,8 +177,8 @@ Loop one over the drone until it sits. Then nudge the root up a half-step and go
     <div class="vibe" id="vibe"></div>
     <div class="rollwrap" id="rollwrap"></div>
     <div class="legend">
-      <span><span class="swatch" style="background:#9a640c;box-shadow:0 0 0 2.5px rgba(154,100,12,.18)"></span>principal tone</span>
-      <span><span class="swatch" style="background:#78705f"></span>ornament</span>
+      <span><span class="swatch" style="background:#9a640c"></span>principal tone</span>
+      <span><span class="swatch" style="background:#5d5548"></span>ornament</span>
       <span><span class="swatch" style="background:var(--accent)"></span>playing</span>
     </div>
     <div class="stats" id="stats"></div>
@@ -188,8 +188,9 @@ Loop one over the drone until it sits. Then nudge the root up a half-step and go
       <button id="stopBtn" class="ghost">&#9632; Stop</button>
       <label class="mini"><input type="checkbox" id="loopCk"> loop</label>
       <label class="mini">rest <select id="restSel">
+        <option value="none" selected>none &mdash; seamless</option>
         <option value="beat">1 beat</option>
-        <option value="bar" selected>1 bar</option>
+        <option value="bar">1 bar</option>
         <option value="bar2">2 bars</option>
       </select></label>
       <label class="mini">keys <select id="cycleSel">
@@ -618,7 +619,7 @@ function applyFilter(){
 }
 
 /* ---------- staff notation rendering ---------- */
-const INK='#2a241c', BRASS='#9a640c', BRASS_EDGE='#53350a', ORN='#78705f', HALO='rgba(154,100,12,.16)';
+const INK='#2a241c', BRASS='#9a640c', ORN='#5d5548';
 function renderStaff(notes){
   const hs=5.5, STEM=7*hs, NX=Math.round(hs*5.2), GX=10, PADL=94;
   let prev=null;
@@ -680,15 +681,13 @@ function renderStaff(notes){
         s+='<line x1="'+(cx-9.5)+'" y1="'+y(L)+'" x2="'+(cx+9.5)+'" y2="'+y(L)+'" stroke="#8a7f6c" stroke-width="1"/>';
       for(let L=40;L<=diats[i];L+=2)
         s+='<line x1="'+(cx-9.5)+'" y1="'+y(L)+'" x2="'+(cx+9.5)+'" y2="'+y(L)+'" stroke="#8a7f6c" stroke-width="1"/>';
-      if(n.principal) s+='<circle cx="'+cx+'" cy="'+cy+'" r="9.5" fill="'+HALO+'"/>';
       if(glyphs[i])
         s+='<text x="'+(cx-8.5)+'" y="'+(cy+4.5)+'" text-anchor="end" font-size="15" font-family="serif" fill="'+INK+'">'+glyphs[i]+'</text>';
       const fill=n.principal?BRASS:ORN;
       const stemX=up?cx+5.1:cx-5.1;
       s+='<line x1="'+stemX+'" y1="'+cy+'" x2="'+stemX+'" y2="'+(up?beamY+3.6:beamY-3.6)+'" stroke="'+fill+'" stroke-width="1.4"/>';
       s+='<ellipse id="nh'+i+'" class="nh" data-f="'+fill+'" data-x="'+cx+'" cx="'+cx+'" cy="'+cy
-        +'" rx="'+(n.principal?6.1:5.4)+'" ry="'+(n.principal?4.5:4)+'" transform="rotate(-18 '+cx+' '+cy+')" fill="'+fill+'"'
-        +(n.principal?' stroke="'+BRASS_EDGE+'" stroke-width="1.1"':'')+'/>';
+        +'" rx="5.7" ry="4.2" transform="rotate(-18 '+cx+' '+cy+')" fill="'+fill+'"/>';
     });
     if(g.length>1){
       const x1=up?xs[g[0]]+5.1:xs[g[0]]-5.1, x2=up?xs[g[g.length-1]]+5.1:xs[g[g.length-1]]-5.1;
@@ -711,8 +710,7 @@ function renderRoll(notes){
   notes.forEach((n,i)=>{
     const fill=n.principal?BRASS:ORN;
     s+='<rect id="nh'+i+'" class="nh" data-f="'+fill+'" data-x="'+(PAD+i*NW)+'" x="'+(PAD+i*NW)
-      +'" y="'+y(n.m)+'" width="'+(NW-6)+'" height="'+(RH-2)+'" rx="2" fill="'+fill+'"'
-      +(n.principal?' stroke="'+BRASS_EDGE+'" stroke-width="1"':'')+'/>';
+      +'" y="'+y(n.m)+'" width="'+(NW-6)+'" height="'+(RH-2)+'" rx="2" fill="'+fill+'"/>';
     s+='<text x="'+(PAD+i*NW+(NW-6)/2)+'" y="'+(H-6)+'" text-anchor="middle" font-size="9" '
       +'font-family="ui-monospace,Menlo,monospace" fill="'+(n.principal?'#7e5613':'#8a7f6c')+'">'
       +noteName(n.m)+'</text>';
@@ -782,7 +780,7 @@ function voice(m,t,dur,vel){
   const o1=actx.createOscillator(); o1.type='triangle'; o1.frequency.value=f;
   const o2=actx.createOscillator(); o2.type='sawtooth'; o2.frequency.value=f; o2.detune.value=6;
   const g2=actx.createGain(); g2.gain.value=0.28; o2.connect(g2);
-  const vf=actx.createBiquadFilter(); vf.type='lowpass'; vf.frequency.value=2300;
+  const vf=actx.createBiquadFilter(); vf.type='lowpass'; vf.frequency.value=2800;
   const vg=actx.createGain();
   vg.gain.setValueAtTime(0.0001,t);
   vg.gain.exponentialRampToValueAtTime(vel,t+0.014);
@@ -841,15 +839,15 @@ function stopPlayback(){
   if(actx) stopDrone();
   document.querySelectorAll('.nh').forEach(el=>el.setAttribute('fill',el.dataset.f));
 }
-function schedulePass(notes,shift,dur,beat,t0){
+function schedulePass(notes,shift,dur,beat,t0,holdLast){
   const mute=$('muteCk').checked;
   if($('clickCk').checked){
     const total=notes.length*dur;
     for(let tb=0;tb<total-0.01;tb+=beat) tick(t0+tb,false);
   }
   notes.forEach((n,i)=>{
-    const t=t0+i*dur, d=(i===notes.length-1)?dur*2:dur;   // final note = quarter, as engraved
-    if(!mute) voice(n.m+shift,t,d,n.principal?0.30:0.22);
+    const t=t0+i*dur, d=(holdLast&&i===notes.length-1)?dur*2:dur;  // landing = quarter only when held
+    if(!mute) voice(n.m+shift,t,d,0.27);
     timers.push(setTimeout(()=>{
       const el=$('nh'+i); if(!el) return;                 // resolve live: survives re-renders
       el.setAttribute('fill','#c23b22');
@@ -860,7 +858,7 @@ function schedulePass(notes,shift,dur,beat,t0){
       const el=$('nh'+i); if(el) el.setAttribute('fill',el.dataset.f);
     },Math.max(0,(t+d-actx.currentTime)*1000)));
   });
-  return t0+(notes.length+1)*dur;                          // includes the final note's extra eighth
+  return t0+(notes.length+(holdLast?1:0))*dur;
 }
 function play(){
   if(selIdx<0) return;
@@ -873,7 +871,11 @@ function play(){
   const s0=(family[selIdx]||[]).length+1;                  // eighths per beam group
   const beat=(s0===3)?dur*3:dur*2;
   const barLen=(s0===3)?dur*6:dur*8;
-  const gap={beat:beat, bar:barLen, bar2:barLen*2}[$('restSel').value]||beat;
+  const gap={none:0, beat:beat, bar:barLen, bar2:barLen*2}[$('restSel').value]||0;
+  // seamless loop: skip the landing note (it doubles the next pass's first note)
+  // and run straight back to the top — no held quarter, no rest
+  const seamless=$('loopCk').checked && $('restSel').value==='none';
+  const trim=ns=>seamless?ns.slice(0,-1):ns;
   actx.resume().then(()=>{
     if(!playing) return;
     if($('droneCk').checked) startDrone(rootSel.value|0,shift);
@@ -885,7 +887,7 @@ function play(){
     }
     const pass=(t,notesNow)=>{
       if(!playing) return;
-      const tEnd=schedulePass(notesNow,shift,dur,beat,t);
+      const tEnd=schedulePass(notesNow,shift,dur,beat,t,!seamless);
       if($('loopCk').checked){
         const tNext=tEnd+gap;
         timers.push(setTimeout(()=>{
@@ -899,7 +901,7 @@ function play(){
             cycleDirty=true;                               // harmony labels refresh on Stop
             retuneDrone(r,shift,tNext-0.05);
             drawSelected();
-            nextNotes=buildSeq(family[selIdx]);
+            nextNotes=trim(buildSeq(family[selIdx]));
           }
           pass(tNext,nextNotes);
         },Math.max(0,(tNext-actx.currentTime-0.15)*1000)));
@@ -908,7 +910,7 @@ function play(){
           Math.max(0,(tEnd-actx.currentTime+0.15)*1000)));
       }
     };
-    pass(t0,buildSeq(family[selIdx]));
+    pass(t0,trim(buildSeq(family[selIdx])));
   });
 }
 
