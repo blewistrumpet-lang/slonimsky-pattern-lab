@@ -637,9 +637,8 @@ function applyFilter(){
 /* ---------- staff notation rendering ---------- */
 const INK='#2a241c', BRASS='#9a640c', ORN='#5d5548';
 function renderStaff(notes,availW){
-  const hs=5.5, STEM=7*hs, NX=Math.round(hs*5.2), GX=10, PADL=94, PADS=46;
+  const hs=5.5, STEM=7*hs, GX=10, PADL=94, PADS=46, ACCW=9, BARW=14;
   availW=availW||900;
-  const flowW=Math.max(340,availW);      // can't wrap narrower than a measure — scale instead
   let prev=null;
   // principals always spell from the sharp table (matches the principals readout);
   // ornaments keep the sharp-ascending / flat-descending chromatic convention
@@ -654,57 +653,79 @@ function renderStaff(notes,availW){
   for(let gi=0;gi<groups.length;gi+=perBar) measures.push(groups.slice(gi,gi+perBar));
   // accidental decisions are measure-scoped (independent of line breaks)
   const glyphs=new Array(notes.length).fill('');
-  let accState={}, carry={};
-  measures.forEach((m,mi)=>{
-    if(mi>0){ carry=accState; accState={}; }
-    m.forEach(g=>g.forEach(i=>{
-      const key=sp[i].letter+Math.floor(notes[i].m/12);
-      const st=(key in accState)?accState[key]:0;
-      if(sp[i].acc!==st){ glyphs[i]=ACC_GLYPH[String(sp[i].acc)]; accState[key]=sp[i].acc; }
-      else if(sp[i].acc===0 && !(key in accState) && carry[key]){
-        glyphs[i]=ACC_GLYPH['0'];                  // courtesy natural after an inflected bar
-        accState[key]=0;
-      }
-    }));
-  });
-  // flow measures into systems against the available width
-  const mWidth=m=>m.reduce((w,g)=>w+g.reduce((v,i)=>v+NX+(glyphs[i]?9:0),0)+GX,0)+14;
-  const systems=[]; let sys=[], flowX=PADL;
+  { let accState={}, carry={};
+    measures.forEach((m,mi)=>{
+      if(mi>0){ carry=accState; accState={}; }
+      m.forEach(g=>g.forEach(i=>{
+        const key=sp[i].letter+Math.floor(notes[i].m/12);
+        const st=(key in accState)?accState[key]:0;
+        if(sp[i].acc!==st){ glyphs[i]=ACC_GLYPH[String(sp[i].acc)]; accState[key]=sp[i].acc; }
+        else if(sp[i].acc===0 && !(key in accState) && carry[key]){
+          glyphs[i]=ACC_GLYPH['0'];                // courtesy natural after an inflected bar
+          accState[key]=0;
+        }
+      }));
+    });
+  }
+  // legibility first: tighten note SPACING to fit narrow screens; note size is sacred
+  const mNat=(m,nx)=>m.reduce((w,g)=>w+g.reduce((v,i)=>v+nx+(glyphs[i]?ACCW:0),0)+GX,0)+BARW;
+  let NX=Math.round(hs*5.2);
+  while(NX>19 && 70+Math.max(...measures.map(m=>mNat(m,NX)))>availW) NX--;
+  const flowW=Math.max(300,availW);
+  // flow measures into systems
+  const systems=[]; let sys=[], fx=PADL;
   measures.forEach(m=>{
-    const w=mWidth(m);
-    if(sys.length && flowX+w>flowW){ systems.push(sys); sys=[]; flowX=PADS; }
-    sys.push(m); flowX+=w;
+    const w=mNat(m,NX);
+    if(sys.length && fx+w>flowW-8){ systems.push(sys); sys=[]; fx=PADS; }
+    sys.push(m); fx+=w;
   });
   if(sys.length) systems.push(sys);
-  // vertical geometry, shared by every system
-  const diats=sp.map(q=>q.diat);
-  const maxD=Math.max(38,...diats), minD=Math.min(28,...diats);
-  let needD=maxD;                                  // up-stem beams need headroom too
-  groups.forEach(g=>{
-    if((g.reduce((a,i)=>a+diats[i],0)/g.length)<34)
-      needD=Math.max(needD,Math.max(...g.map(i=>diats[i]))+7);
-  });
-  const topPad=30+Math.max(0,needD-38)*hs;
-  const sysH=topPad+(38-minD)*hs+STEM+18;
-  const H=systems.length*sysH+6;
-  let W=0, s='';
+  const upOf=g=>(g.reduce((a,i)=>a+sp[i].diat,0)/g.length)<34;
+  let yCur=4, W=0, out='';
   systems.forEach((msys,si)=>{
-    const off=si*sysH;
-    const y=d=>off+topPad+(38-d)*hs;
-    let x=si===0?PADL:PADS, body='';
+    // vertical bounds from THIS system's own content (noteheads + beam headroom)
+    const idxs=[]; msys.forEach(m=>m.forEach(g=>g.forEach(i=>idxs.push(i))));
+    let hiD=Math.max(38,...idxs.map(i=>sp[i].diat));
+    let loD=Math.min(28,...idxs.map(i=>sp[i].diat));
+    msys.forEach(m=>m.forEach(g=>{
+      const gHi=Math.max(...g.map(i=>sp[i].diat)), gLo=Math.min(...g.map(i=>sp[i].diat));
+      if(upOf(g)) hiD=Math.max(hiD,gHi+7); else loD=Math.min(loD,gLo-7);
+    }));
+    const topPad=Math.max(20,8+(hiD-38)*hs);
+    const botPad=Math.max(32,10+(30-loD)*hs);
+    const sysH=topPad+8*hs+botPad;
+    const y=d=>yCur+topPad+(38-d)*hs;
+    // pass 1: natural x positions
+    const pad=si===0?PADL:PADS;
+    let x=pad; const nxPos=new Map(), barsX=[];
+    msys.forEach(m=>{
+      m.forEach(g=>{
+        g.forEach(i=>{ if(glyphs[i])x+=ACCW; nxPos.set(i,x); x+=NX; });
+        x+=GX;
+      });
+      barsX.push(x); x+=BARW;
+    });
+    // justify: stretch every full line to the same right edge (last line stays natural)
+    const isLast=si===systems.length-1;
+    let f=1;
+    if(!isLast){
+      f=(flowW-16-pad)/(barsX[barsX.length-1]-pad);
+      f=Math.max(1,Math.min(1.6,f));
+    }
+    const mx=v=>pad+(v-pad)*f;
+    const endX=mx(barsX[barsX.length-1]);
+    let body='';
     msys.forEach((m,mj)=>{
       m.forEach(g=>{
-        const gy=g.map(i=>y(diats[i]));
-        const up=(g.reduce((a,i)=>a+diats[i],0)/g.length)<34;
+        const up=upOf(g);
+        const gy=g.map(i=>y(sp[i].diat));
         const beamY=up?Math.min(...gy)-STEM:Math.max(...gy)+STEM;
         const cxs=[];
         g.forEach(i=>{
-          if(glyphs[i]) x+=9;                      // engraving: leave room before an accidental
-          const cx=x; x+=NX;
-          const cy=y(diats[i]);
-          for(let L=28;L>=diats[i];L-=2)
+          const cx=mx(nxPos.get(i)), cy=y(sp[i].diat), d=sp[i].diat;
+          for(let L=28;L>=d;L-=2)
             body+='<line x1="'+(cx-9.5)+'" y1="'+y(L)+'" x2="'+(cx+9.5)+'" y2="'+y(L)+'" stroke="#8a7f6c" stroke-width="1"/>';
-          for(let L=40;L<=diats[i];L+=2)
+          for(let L=40;L<=d;L+=2)
             body+='<line x1="'+(cx-9.5)+'" y1="'+y(L)+'" x2="'+(cx+9.5)+'" y2="'+y(L)+'" stroke="#8a7f6c" stroke-width="1"/>';
           if(glyphs[i])
             body+='<text x="'+(cx-8.5)+'" y="'+(cy+4.5)+'" text-anchor="end" font-size="15" font-family="serif" fill="'+INK+'">'+glyphs[i]+'</text>';
@@ -719,34 +740,30 @@ function renderStaff(notes,availW){
           const bx1=(up?cxs[0]+5.1:cxs[0]-5.1), bx2=(up?cxs[cxs.length-1]+5.1:cxs[cxs.length-1]-5.1);
           body+='<rect x="'+(bx1-0.7)+'" y="'+(up?beamY:beamY-4)+'" width="'+(bx2-bx1+1.4)+'" height="4" fill="'+INK+'"/>';
         }
-        x+=GX;
       });
-      const isLast=(si===systems.length-1)&&(mj===msys.length-1);
-      if(!isLast){
-        body+='<line x1="'+(x+1)+'" y1="'+y(38)+'" x2="'+(x+1)+'" y2="'+y(30)+'" stroke="#6b6154" stroke-width="1"/>';
-      }else{
-        body+='<line x1="'+(x+1)+'" y1="'+y(38)+'" x2="'+(x+1)+'" y2="'+y(30)+'" stroke="#6b6154" stroke-width="1"/>';
-        body+='<rect x="'+(x+5)+'" y="'+y(38)+'" width="3.5" height="'+(y(30)-y(38))+'" fill="'+INK+'"/>';
-      }
-      x+=14;
+      const bx=mx(barsX[mj]);
+      body+='<line x1="'+bx+'" y1="'+y(38)+'" x2="'+bx+'" y2="'+y(30)+'" stroke="#6b6154" stroke-width="1"/>';
+      if(isLast && mj===msys.length-1)
+        body+='<rect x="'+(bx+4)+'" y="'+y(38)+'" width="3.5" height="'+(y(30)-y(38))+'" fill="'+INK+'"/>';
     });
-    const endX=x+2;
-    W=Math.max(W,endX+8);
     let head='';
     for(let d=30;d<=38;d+=2)
-      head+='<line x1="6" y1="'+y(d)+'" x2="'+endX+'" y2="'+y(d)+'" stroke="#a99c80" stroke-width="1"/>';
+      head+='<line x1="6" y1="'+y(d)+'" x2="'+(endX+(isLast?9:1))+'" y2="'+y(d)+'" stroke="#a99c80" stroke-width="1"/>';
     head+='<text x="10" y="'+(y(30)+16)+'" font-size="75" font-family="serif" fill="'+INK+'">\u{1D11E}</text>';
     if(si===0){
       head+='<text x="70" y="'+(y(34)-1.5)+'" text-anchor="middle" font-size="20" font-weight="bold" font-family="Georgia,serif" fill="'+INK+'">'+tsig[0]+'</text>';
       head+='<text x="70" y="'+(y(30)-1.5)+'" text-anchor="middle" font-size="20" font-weight="bold" font-family="Georgia,serif" fill="'+INK+'">'+tsig[1]+'</text>';
     }
-    s+=head+body;
+    out+=head+body;
+    W=Math.max(W,endX+14);
+    yCur+=sysH;
   });
-  // fit-to-width: if even one measure outgrows the container, scale the engraving down
+  const H=yCur+4;
+  // last resort only: if spacing compression still can't fit, scale the whole engraving
   const fitW=Math.min(W,Math.max(160,availW));
   const fitH=fitW<W?Math.round(H*fitW/W):H;
   return '<svg id="score" viewBox="0 0 '+W+' '+H+'" width="'+fitW+'" height="'+fitH
-    +'" xmlns="http://www.w3.org/2000/svg">'+s+'</svg>';
+    +'" xmlns="http://www.w3.org/2000/svg">'+out+'</svg>';
 }
 
 /* ---------- piano roll rendering ---------- */
