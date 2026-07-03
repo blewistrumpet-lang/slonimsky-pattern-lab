@@ -31,4 +31,13 @@ jobs:
           path: '.'
       - name: Deploy to GitHub Pages
         id: deployment
+        continue-on-error: true
+        uses: actions/deploy-pages@v4
+      - name: Retry deploy (Pages backend is flaky)
+        if: steps.deployment.outcome == 'failure'
+        id: deployment2
+        continue-on-error: true
+        uses: actions/deploy-pages@v4
+      - name: Second retry
+        if: steps.deployment2.outcome == 'failure'
         uses: actions/deploy-pages@v4
